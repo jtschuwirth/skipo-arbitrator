@@ -31,20 +31,29 @@ def get_quotation(client, base_currency, quote_currency, is_base_qty, side, qty)
     })
     return response
 
-def quotation_machine(client, currencies, fiats):
-    for currency in currencies:
-        for fiat in fiats:
-            fiat_currency = fiat['name']
-            qty = fiat['qty']
-            print("--------------------")
+def quotation_machine(client, markets, quote_currencies, env, strategy):
+    for market in markets:
+            quote_symbol = market['quoteCurrencyId']
+            base_symbol = market['baseCurrencyId']
+
+            quote_currency = quote_currencies[quote_symbol]
+            quote_qty = float(quote_currency['qty'])
+            min_quote_qty = float(market['minQuoteQty'])
+
+            if quote_qty < min_quote_qty:
+                print(f"Skipping market: [{base_symbol}-{quote_symbol}] because quote qty is less than min quote qty")
+                continue
+
+            if strategy == 'quote_for_min':
+                quote_qty = min_quote_qty
+
             try:
-                if currency == fiat_currency:
-                    continue
-                print(f'Checking market: [{currency}-{fiat_currency}]')
-                market = get_markets_prices(client, currency, fiat_currency, qty)
+                print("---------------------------------")
+                print(f'Checking market: [{base_symbol}-{quote_symbol}] in {env} with strategy {strategy}')
+                market = get_markets_prices(client, base_symbol, quote_symbol, quote_qty)
                 difference = analyse_market_difference(market)
                 if (difference['rate_difference'] > 0):
-                    print(f"EXECUTE, earn: {difference['gains']} {fiat_currency} with trading volume {qty} {fiat_currency}")
+                    print(f"EXECUTE, earn: {difference['gains']} {quote_symbol} with trading volume {quote_qty} {quote_symbol}")
                     print(f"orders: buy: {market['buy']['ordId']} sell: {market['sell']['ordId']}")
                     return {
                         'status': 200,
@@ -53,10 +62,10 @@ def quotation_machine(client, currencies, fiats):
                         'sellOrdId': market['sell']['ordId']
                     }
                 else:
-                    print(f"NEXT, loose: {difference['gains']} {fiat_currency} with trading volume {qty} {fiat_currency}")
+                    print(f"NEXT, loose: {difference['gains']} {quote_symbol} with trading volume {quote_qty} {quote_symbol}")
                     print(f"orders: buy: {market['buy']['ordId']} sell: {market['sell']['ordId']}")
             except:
-                print(f"Error checking market: [{currency}-{fiat_currency}]")
+                print(f"Error checking market: [{base_symbol}-{quote_symbol}]")
                 continue
     
     return {
