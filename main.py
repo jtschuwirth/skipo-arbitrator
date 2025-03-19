@@ -7,28 +7,58 @@ from functions.exxegutor_machine import exxegutor_machine
 
 load_dotenv()
 
-def get_supported_currencies(client):
-    response = client.request('GET', '/v1/supported_currencies', params={'take': 50, 'page': 1})
-    return response.get('data')
+def get_envs():
+    isProd = os.getenv('ENV') == 'prod'
+    print('Running in production env' if isProd else 'Running in development env')
+    if isProd:
+        return {
+            'API_URL': os.getenv('API_URL_PROD'),
+            'PRIVATE_KEY_PATH': os.getenv('PRIVATE_KEY_PATH_PROD'),
+            'API_KEY': os.getenv('API_KEY_PROD'),
+            'EXECUTE': os.getenv('EXECUTE'),
+            'CURRENCIES': ['BTC', 'USDT', 'ETH', 'BNB', 'DOGE', 'ADA', 'LTC', 'SOL', 'TRX', 'USDC', 'XRP'],
+            'FIATS': [{
+                'name': 'CLP',
+                'qty': 30000
+            },
+            {
+                'name': 'USDT',
+                'qty': 30
+            }]
+        }
+    else:
+        return {
+            'API_URL': os.getenv('API_URL_DEV'),
+            'PRIVATE_KEY_PATH': os.getenv('PRIVATE_KEY_PATH_DEV'),
+            'API_KEY': os.getenv('API_KEY_DEV'),
+            'EXECUTE': os.getenv('EXECUTE'),
+            'CURRENCIES': ['BTC', 'USDT'],
+            'FIATS': [{
+                'name': 'CLP',
+                'qty': 30000
+            },
+            {
+                'name': 'USDT',
+                'qty': 30
+            }]
+        }
 
 def main():
-    url = os.getenv('API_URL')
-    private_key_path = os.getenv('PRIVATE_KEY_PATH')
-    api_key = os.getenv('API_KEY')
+    envs = get_envs()
+    url = envs['API_URL']
+    private_key_path = envs['PRIVATE_KEY_PATH']
+    api_key = envs['API_KEY']
+    execute = True if envs['EXECUTE'] == 'true' else False
+    currencies = envs['CURRENCIES']
+    fiats = envs['FIATS']
 
     client = SkipoApiClient(url, api_key, private_key_path)
-    supported_currencies = get_supported_currencies(client)
-    currencies = [currency['id'] for currency in supported_currencies if currency['type'] == 'CRYPTO']
-
-    fiat_qty = 100000
-    fiats = ['clp']
-    currencies = ['BTC', 'USDT', 'ETH', 'WLD']
     while True:
-        response = quotation_machine(client, currencies, fiats, fiat_qty)
+        response = quotation_machine(client, currencies, fiats)
         if response['action'] == 'NEXT':
             time.sleep(15)
             continue
-        elif response['action'] == 'BUY':
+        elif response['action'] == 'EXECUTE' and execute:
             exxegutor_machine(client, [response['buyOrdId'], response['sellOrdId']])
             time.sleep(1)
             continue

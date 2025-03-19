@@ -23,36 +23,40 @@ def analyse_market_difference(market):
 
 def get_quotation(client, base_currency, quote_currency, is_base_qty, side, qty):
     response = client.request('POST', '/v1/converts/quotations', body={
-        'baseCurrency': base_currency, 
-        'quoteCurrency': quote_currency,
-        'isBaseQty': is_base_qty,
+        'baseCurrencyId': base_currency, 
+        'quoteCurrencyId': quote_currency,
+        'qtyCurrencyId': base_currency if is_base_qty else quote_currency,
         'side': side,
-        'qty': str(qty)
+        'quantity': str(qty)
     })
     return response
 
-def quotation_machine(client, currencies, fiats, qty):
+def quotation_machine(client, currencies, fiats):
     for currency in currencies:
         for fiat in fiats:
+            fiat_currency = fiat['name']
+            qty = fiat['qty']
             print("--------------------")
             try:
-                print(f'Checking market: [{currency.lower()}-{fiat}]')
-                market = get_markets_prices(client, currency.lower(), fiat, qty)
+                if currency == fiat_currency:
+                    continue
+                print(f'Checking market: [{currency}-{fiat_currency}]')
+                market = get_markets_prices(client, currency, fiat_currency, qty)
                 difference = analyse_market_difference(market)
                 if (difference['rate_difference'] > 0):
-                    print(f"BUY, earn: {difference['gains']} {fiat.upper()} with trading volume {qty} {fiat.upper()}")
+                    print(f"EXECUTE, earn: {difference['gains']} {fiat_currency} with trading volume {qty} {fiat_currency}")
                     print(f"orders: buy: {market['buy']['ordId']} sell: {market['sell']['ordId']}")
                     return {
                         'status': 200,
-                        'action': 'BUY',
+                        'action': 'EXECUTE',
                         'buyOrdId': market['buy']['ordId'],
                         'sellOrdId': market['sell']['ordId']
                     }
                 else:
-                    print(f"SELL, loose: {difference['gains']} {fiat.upper()} with trading volume {qty} {fiat.upper()}")
+                    print(f"NEXT, loose: {difference['gains']} {fiat_currency} with trading volume {qty} {fiat_currency}")
                     print(f"orders: buy: {market['buy']['ordId']} sell: {market['sell']['ordId']}")
             except:
-                print(f"Error checking market: [{currency.lower()}-{fiat}]")
+                print(f"Error checking market: [{currency}-{fiat_currency}]")
                 continue
     
     return {
