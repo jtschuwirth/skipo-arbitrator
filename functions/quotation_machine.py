@@ -31,21 +31,23 @@ def get_quotation(client, base_currency, quote_currency, is_base_qty, side, qty)
     })
     return response
 
-def quotation_machine(client, markets, quote_currencies, env, strategy):
+def quotation_machine(client, markets, max_quote, env, strategy):
     for market in markets:
             quote_symbol = market['quoteCurrencyId']
             base_symbol = market['baseCurrencyId']
 
-            quote_currency = quote_currencies[quote_symbol]
-            quote_qty = float(quote_currency['qty'])
+            quote_qty = 0
+            max_quote_qty = float(max_quote[quote_symbol]['qty'])
             min_quote_qty = float(market['minQuoteQty'])
+
+            if strategy == 'quote_for_min':
+                quote_qty = min_quote_qty
+            elif strategy == 'quote_for_max':
+                quote_qty = max_quote_qty
 
             if quote_qty < min_quote_qty:
                 print(f"Skipping market: [{base_symbol}-{quote_symbol}] because quote qty is less than min quote qty")
                 continue
-
-            if strategy == 'quote_for_min':
-                quote_qty = min_quote_qty
 
             try:
                 print("---------------------------------")

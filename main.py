@@ -8,6 +8,8 @@ from functions.get_envs import get_envs
 
 load_dotenv()
 
+strategies = set(['quote_for_max', 'quote_for_min'])
+
 def main():
     envs = get_envs()
     env = envs['ENV']
@@ -16,9 +18,12 @@ def main():
     api_key = envs['API_KEY']
     execute = True if envs['EXECUTE'] == 'true' else False
 
-    # Strategies: default, quote_for_min
     strategy = envs['STRATEGY']
-    quote_currencies = {
+    if strategy not in strategies:
+        print(f"Invalid strategy: {strategy}")
+        return
+    
+    max_quote = {
         'CLP': {
             'symbol': 'CLP',
             'qty': 30000
@@ -27,12 +32,12 @@ def main():
                 'symbol': 'USDT',
                 'qty': 30
             }
-        }        
+    }        
 
     client = SkipoApiClient(url, api_key, private_key_path)
     markets = get_supported_markets(client, env)
     while True:
-        response = quotation_machine(client, markets, quote_currencies, env, strategy)
+        response = quotation_machine(client, markets, max_quote, env, strategy)
         if response['action'] == 'NEXT':
             time.sleep(15)
             continue
