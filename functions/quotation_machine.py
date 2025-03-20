@@ -1,3 +1,5 @@
+import time
+
 def get_markets_prices(client, currency, fiat, qty):
     quotation_buy = get_quotation(client, currency, fiat, False, 'BUY', qty)
     quotation_sell = get_quotation(client, currency, fiat, False, 'SELL', qty)
@@ -29,6 +31,9 @@ def get_quotation(client, base_currency, quote_currency, is_base_qty, side, qty)
         'side': side,
         'quantity': str(qty)
     })
+    status_code = response['statusCode'] if 'statusCode' in response else 200
+    if status_code == 429:
+        raise Exception('Too many requests')
     return response
 
 def quotation_machine(client, markets, max_quote, env, strategy):
@@ -66,8 +71,11 @@ def quotation_machine(client, markets, max_quote, env, strategy):
                 else:
                     print(f"NEXT, loose: {difference['gains']} {quote_symbol} with trading volume {quote_qty} {quote_symbol}")
                     print(f"orders: buy: {market['buy']['ordId']} sell: {market['sell']['ordId']}")
-            except:
-                print(f"Error checking market: [{base_symbol}-{quote_symbol}]")
+                    time.sleep(2)
+            except Exception as e:
+
+                print(f"Error checking market: [{base_symbol}-{quote_symbol}], {e}")
+                time.sleep(2)
                 continue
     
     return {

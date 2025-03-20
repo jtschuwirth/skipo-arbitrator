@@ -26,11 +26,11 @@ def main():
     max_quote = {
         'CLP': {
             'symbol': 'CLP',
-            'qty': 30000
+            'qty': 40000
         },
         'USDT': {
                 'symbol': 'USDT',
-                'qty': 30
+                'qty': 50
             }
     }        
 
